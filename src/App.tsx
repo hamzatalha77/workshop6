@@ -1,102 +1,109 @@
-import { useEffect, useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import './App.css'
-import axios from 'axios'
+
+interface S3Data {
+  BucketName: string
+  ObjectName: string
+  ObjectContent: string
+}
 
 function App() {
-  // aws gateway link.
-  const link =
-    'https://cqyqwq2u66.execute-api.us-east-1.amazonaws.com/newstage8888/test_resource'
-
-  let link_ // link to fetch with
-
-  const [buckets, setBuckets] = useState<string[]>([]) // buckets in aws console
-  const [objects, setObjects] = useState<string[]>([]) // objects inside the selected bucket
-  const [object, setObject] = useState('') // the object fetched from the bucket&key
-  const [backet, setBacket] = useState('') // selected bucket
-  const [key, setKey] = useState('') // selected object key
-
-  function helperToArray(target: String): string[] {
-    return target.substring(1, target.length - 1).split(',')
-  }
-  function helperToValidName(target: String): string {
-    return target.trim().substring(1, target.trim().length - 1)
-  }
+  const [buckets, setBuckets] = useState<string[]>([])
+  const [objects, setObjects] = useState<string[]>([])
+  const [selectedObject, setSelectedObject] = useState<string>('')
+  const [selectedBucket, setSelectedBucket] = useState<string>('')
+  const [selectedObjectContent, setSelectedObjectContent] = useState<string>('')
+  const [data, setData] = useState<S3Data[]>([])
 
   useEffect(() => {
-    link_ =
-      backet.length && key.length
-        ? `${link}?bucket=${backet}&key=${key}` // if I have both the bucketname and Objectkey I'll get that object..
-        : backet.length
-        ? `${link}?bucket=${backet.toString()}` // if I have only the bucketname I'll get only the Objects names of that bucket
-        : `${link}` // if I don't have none, I'll just get a list if my aws buckets
-    // here I fetch data from the apiGateway
-    axios
-      .get(link_)
-      .then((resp: any) => {
-        console.log(resp)
-        console.log('loop')
-        backet.length && key.length
-          ? setObject(resp.data) // an object body
-          : backet.length
-          ? setObjects(helperToArray(resp.data)) // a bucket object names
-          : setBuckets(helperToArray(resp.data)) // bucket names
+    // Fetch the data when the component mounts
+    fetch(
+      'https://u85th1dlw1.execute-api.us-east-1.amazonaws.com/myw6stage/new-ryouma-resource'
+    )
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`Request failed with status: ${response.status}`)
+        }
+        return response.json()
       })
-      .catch((resp) => {
-        console.error(resp)
+      .then((data) => {
+        if (Array.isArray(data)) {
+          const retrievedBuckets = data.map((item) => item.BucketName)
+          setBuckets(retrievedBuckets)
+          setData(data)
+        }
       })
-  }, [backet, key])
+      .catch((error) => {
+        console.error('There was an error fetching the data', error)
+      })
+  }, [])
+
+  const handleBucketChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedBucket(e.target.value)
+    const relatedObjects = data
+      .filter((item) => item.BucketName === e.target.value)
+      .map((item) => item.ObjectName)
+    setObjects(relatedObjects)
+  }
+
+  const handleObjectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const objectName = e.target.value
+    setSelectedObject(objectName)
+    const content = data.find(
+      (item) => item.ObjectName === e.target.value
+    )?.ObjectContent
+    setSelectedObjectContent(content || '')
+  }
+
+  // Log the selected data to the console
+  useEffect(() => {
+    if (
+      selectedBucket !== '' &&
+      selectedObject !== '' &&
+      selectedObjectContent !== ''
+    ) {
+      console.log('Selected Bucket:', selectedBucket)
+      console.log('Selected Object:', selectedObject)
+      console.log('Selected Object Content:', selectedObjectContent)
+    }
+  }, [selectedBucket, selectedObject, selectedObjectContent])
 
   return (
-    <>
-      <h1 style={{ color: 'grey' }}>Workshop 6</h1>
-      <div>
-        <h1 style={{ color: 'red' }}>buckets</h1>
-        {buckets.length > 0 ? (
-          <select
-            name="buckets"
-            onChange={(event) => setBacket(event.target.value)}
-          >
-            <option value=""></option>
-            {buckets.map((buc: string) => {
-              return (
-                <option
-                  key={helperToValidName(buc)}
-                  value={helperToValidName(buc)}
-                >
-                  {helperToValidName(buc)}
+    <div className="App">
+      <div className="container">
+        <div className="dropdown-container">
+          <div className="title">Workshop 6</div>
+          <div className="dropdown-item">
+            <label>Select a Bucket</label>
+            <select value={selectedBucket} onChange={handleBucketChange}>
+              <option value="">Select a Bucket</option>
+              {buckets.map((bucket) => (
+                <option key={bucket} value={bucket}>
+                  {bucket}
                 </option>
-              )
-            })}
-          </select>
-        ) : (
-          <h1>no buckets or you have an error in the aws gateway</h1>
-        )}
-      </div>
-      <div>
-        <h1 style={{ color: 'red' }}>objectKeys</h1>
-        {objects.length > 0 ? (
-          <select
-            name="objectKeys"
-            onChange={(event) => setKey(event.target.value)}
-          >
-            <option value=""></option>
-            {objects.map((obj: string) => {
-              return (
-                <option
-                  key={helperToValidName(obj)}
-                  value={helperToValidName(obj)}
-                >
-                  {helperToValidName(obj)}
+              ))}
+            </select>
+          </div>
+          <div className="dropdown-item">
+            <label>Select an Object</label>
+            <select value={selectedObject} onChange={handleObjectChange}>
+              <option value="">Select an Object</option>
+              {objects.map((object) => (
+                <option key={object} value={object}>
+                  {object}
                 </option>
-              )
-            })}
-          </select>
-        ) : (
-          <h1>no objects or none selected</h1>
-        )}
+              ))}
+            </select>
+          </div>
+          <label>Object Content</label>
+          <textarea
+            value={selectedObjectContent}
+            className="content-textarea"
+            readOnly
+          />
+        </div>
       </div>
-      <div>{object && JSON.stringify(object)}</div>
-    </>
+    </div>
   )
 }
 
