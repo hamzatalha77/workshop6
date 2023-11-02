@@ -55,7 +55,6 @@ function App() {
     setSelectedObjectContent(content || '')
   }
 
-  // Log the selected data to the console
   useEffect(() => {
     if (
       selectedBucket !== '' &&
